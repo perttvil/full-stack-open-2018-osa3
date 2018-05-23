@@ -4,8 +4,8 @@ const morgan = require('morgan')
 const cors = require('cors')
 const Note = require('./models/note')
 const Person = require('./models/person')
-
 const app = express()
+require('dotenv').config()
 app.use(express.static('build'))
 app.use(cors())
 app.use(bodyParser.json())
@@ -139,7 +139,6 @@ app.delete('/api/persons/:id', (request, response) => {
             console.log(error)
             response.status(404).end()
         })
-
 })
 
 app.post('/api/persons', (request, response) => {
