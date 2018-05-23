@@ -2,93 +2,55 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
+const Note = require('./models/note')
+const Person = require('./models/person')
 
 const app = express()
 app.use(express.static('build'))
-
-const logger = (request, response, next) => {
-    console.log('Method:', request.method)
-    console.log('Path:  ', request.path)
-    console.log('Body:  ', request.body)
-    console.log('---')
-    next()
-}
+app.use(cors())
+app.use(bodyParser.json())
 morgan.token('request-content', function (req, res) {
     return JSON.stringify(req.body)
 })
 
-
-app.use(cors())
-app.use(bodyParser.json())
 app.use(morgan(':method :url :request-content :status :res[content-length] - :response-time ms'))
-// app.use(logger)
 
-let notes = [
-    {
-        id: 1,
-        content: 'HTML on helppoa',
-        date: '2017-12-10T17:30:31.098Z',
-        important: true
-    },
-    {
-        id: 2,
-        content: 'Selain pystyy suorittamaan vain javascriptiä',
-        date: '2017-12-10T18:39:34.091Z',
-        important: false
-    },
-    {
-        id: 3,
-        content: 'HTTP-protokollan tärkeimmät metodit ovat GET ja POST',
-        date: '2017-12-10T19:20:14.298Z',
-        important: true
+const formatNote = (note) => {
+    return {
+        content: note.content,
+        date: note.date,
+        important: note.important,
+        id: note._id
     }
-]
+}
 
-let persons = [
-    {id: 1, name: 'Arto Hellas', number: '040-123456'},
-    {id: 2, name: 'Martti Tienari', number: '040-123456'},
-    {id: 3, name: 'Arto Järvinen', number: '040-123456'},
-    {id: 4, name: 'Lea Kutvonen', number: '040-123456'}
-]
+const formatPerson = (person) => {
+    return {
+        name: person.name,
+        number: person.number,
+        id: person._id
+    }
+}
 
-
-/*
-app.get('/', (req, res) => {
-    res.send('<h1>Hello World!</h1>')
-})
-*/
-
-app.get('/api/notes', (req, res) => {
-    res.json(notes)
+app.get('/api/notes', (request, response) => {
+    Note
+        .find({})
+        .then(notes => {
+            response.json(notes.map(formatNote))
+        })
 })
 
 app.get('/api/notes/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const note = notes.find(note => note.id === id)
-
-    if (note) {
-        response.json(note)
-    } else {
-        response.status(404).end()
-    }
+    Note
+        .findById(request.params.id)
+        .then(note => {
+            response.json(formatNote(note))
+        })
+        .catch(error => {
+            console.log(error)
+            response.status(404).end()
+        })
 })
-
-app.put('/api/notes/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const updatedNote = request.body
-    const note = notes.find(note => note.id === id)
-    if (note) {
-        notes = notes.map(n => n.id !== id ? n : updatedNote)
-        response.json(updatedNote)
-    } else {
-        response.status(404).end()
-    }
-})
-
-const generateId = () => {
-    const maxId = notes.length > 0 ? notes.map(n => n.id).sort().reverse()[0] : 1
-    return maxId + 1
-}
 
 app.post('/api/notes', (request, response) => {
     const body = request.body
@@ -97,24 +59,50 @@ app.post('/api/notes', (request, response) => {
         return response.status(400).json({error: 'content missing'})
     }
 
-    const note = {
+    const note = new Note({
         content: body.content,
         important: body.important || false,
-        date: new Date(),
-        id: generateId()
-    }
+        date: new Date()
+    })
 
-    notes = notes.concat(note)
-
-    response.json(note)
+    note
+        .save()
+        .then(savedNote => {
+            response.json(formatNote(savedNote))
+        })
+        .catch(error => {
+            console.log(error)
+            response.status(503).end()
+        })
 })
 
 app.delete('/api/notes/:id', (request, response) => {
-    const id = Number(request.params.id)
-    notes = notes.filter(note => note.id !== id)
-
-    response.status(204).end()
+    const id = request.params.id
+    Note.findByIdAndRemove(id)
+        .then(() => response.status(204).end())
+        .catch(error => {
+            console.log(error)
+            response.status(404).end()
+        })
 })
+
+app.put('/api/notes/:id', (request, response) => {
+    const id = request.params.id
+    const updatedNote = request.body
+    Note.findByIdAndUpdate(id, updatedNote, {new: true})
+        .then(() => response.json(updatedNote))
+        .catch(error => {
+            console.log(error)
+            response.status(404).end()
+        })
+})
+
+/*
+const generateId = () => {
+    const maxId = notes.length > 0 ? notes.map(n => n.id).sort().reverse()[0] : 1
+    return maxId + 1
+}
+*/
 
 /** Info */
 app.get('/info', (req, res) => {
@@ -123,25 +111,35 @@ app.get('/info', (req, res) => {
 
 /** Person endpoints */
 
-app.get('/api/persons', (req, res) => {
-    res.json(persons)
+app.get('/api/persons', (request, response) => {
+    Person
+        .find({})
+        .then(persons => {
+            response.json(persons.map(formatPerson))
+        })
 })
 
 app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-
-    if (person) {
-        response.json(person)
-    } else {
-        response.status(404).end()
-    }
+    Person
+        .findById(request.params.id)
+        .then(person => {
+            response.json(formatPerson(person))
+        })
+        .catch(error => {
+            console.log(error)
+            response.status(404).end()
+        })
 })
 
 app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(person => person.id !== id)
-    response.status(204).end()
+    const id = request.params.id
+    Person.findByIdAndRemove(id)
+        .then(() => response.status(204).end())
+        .catch(error => {
+            console.log(error)
+            response.status(404).end()
+        })
+
 })
 
 app.post('/api/persons', (request, response) => {
@@ -152,19 +150,27 @@ app.post('/api/persons', (request, response) => {
     } else if (body.number === undefined) {
         return response.status(400).json({error: 'number missing'})
     } else {
+        /*
         if (persons.find(p => p.name === body.name) !== undefined) {
             return response.status(400).json({error: 'duplicate name'})
         }
+        */
     }
 
-    const person = {
+    const person = new Person({
         name: body.name,
-        number: body.number,
-        id: Math.floor(Math.random() * 999999999999999)
-    }
+        number: body.number
+    })
 
-    persons = persons.concat(person)
-    response.json(person)
+    person
+        .save()
+        .then(savedPerson => {
+            response.json(formatPerson(savedPerson))
+        })
+        .catch(error => {
+            console.log(error)
+            response.status(503).end()
+        })
 })
 
 /** This has to be after endpoints, to be run in right order */
