@@ -1,0 +1,8 @@
+POST http://localhost:3001/api/notes
+content-type: application/json
+
+{
+  "content": "Token-autentikaatio ei ole vielä valmis",
+  "important": true,
+  "userId": "5a6741dcfcf9433f18ee88a0"
+}

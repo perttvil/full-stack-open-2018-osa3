@@ -1,0 +1,8 @@
+PUT http://localhost:3001/api/notes/5a637fe6034da9966e0736c4 
+content-type: application/json
+
+  {
+    "content": "VS Coden REST client on paras keksintö sitten viipaloidun leivän",
+    "date": "2018-01-20T17:44:06.119Z",
+    "important": true
+  }

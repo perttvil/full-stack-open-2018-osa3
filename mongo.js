@@ -1,11 +1,9 @@
 const mongoose = require('mongoose')
 
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').config()
-}
+const url = 'mongodb://fullstack:fullstack@ds211088.mlab.com:11088/fullstack-notes'
 
-const url = process.env.MONGODB_URI
 mongoose.connect(url)
+mongoose.Promise = global.Promise
 
 const Note = mongoose.model('Note', {
     content: String,
@@ -13,70 +11,27 @@ const Note = mongoose.model('Note', {
     important: Boolean
 })
 
-const Person = mongoose.model('Person', {
-    name: String,
-    number: String
-})
-
-const note = new Note({
-    content: 'HTML on helppoa',
-    date: new Date(),
-    important: true
-})
-
-const saveNote = () => {
-    return note
-        .save()
-        .then(() => {
-            console.log('note saved!')
+Note
+    .find({})
+    .then(result => {
+        result.forEach(note => {
+            console.log(note)
         })
-}
+        mongoose.connection.close()
+    })
 
-const findAllNotes = () => {
-    return Note
-        .find({})
-        .then(result => {
-            result.forEach(note => {
-                console.log(note)
-            })
-        })
-}
-
-const savePerson = (person) => {
-    return person
-        .save()
-        .then(() => console.log(`Henkilö ${person.name} numerolla ${person.number} tallennettu!`))
-}
-
-const findAllPeople = () => {
-    return Person
-        .find({})
-        .then(result => {
-            console.log('Puhelinluettelo')
-            result.forEach(person => {
-                console.log(`${person.name} ${person.number}`)
-            })
-        })
-}
-
-const close = () => {
-    mongoose.connection.close()
-}
 
 /*
-save().then(() =>
-    findAll().then(() =>
-        close())
-)
+const note = new Note({
+  content: 'HTTP-protokollan tärkeimmät metodit ovat GET ja POST',
+  date: new Date(),
+  important: false
+})
+
+note
+  .save()
+  .then(response => {
+    console.log('note saved!')
+    mongoose.connection.close()
+  })
 */
-
-if (process.argv.length !== 4) {
-    findAllPeople().then(() => close())
-} else {
-    const newPerson = new Person({
-        name: process.argv[2],
-        number: process.argv[3]
-    })
-    savePerson(newPerson).then(() => close())
-}
-
